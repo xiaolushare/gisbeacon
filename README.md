@@ -31,7 +31,7 @@ Get the info of the Chinese administrative region by latitude and longitude.
 #### POST参数:
 | 字段名称        | 字段说明 |   类型   |  必填  | 备注                          |
 | ----------- | :--- | :----: | :--: | :-------------------------- |
-| type        | 坐标类型 | string |  Y   | 支持类型 `gcj02`|`bd09`|`wgs84` |
+| type        | 坐标类型 | string |  Y   | 支持类型 `gcj02`,`bd09`,`wgs84` |
 | coordinates | 坐标点  | array  |  Y   | 注意经纬度顺序                     |
 
 
