@@ -229,12 +229,12 @@ func main() {
     r.POST("/gis/convert", func(c *gin.Context) {
         setContextHearder(c)
         var coordinatesConvertRequest CoordinatesConvertRequest
-        var resCoordinates = &s2.Loc{Type: coordinatesConvertRequest.Convert}
         if reqBody, validate := requestJsonSchemaValidate(coordinatesConvertRequestSchema, c); !validate {
             return
         } else {
             json.Unmarshal(reqBody, &coordinatesConvertRequest)
         }
+        var resCoordinates = &s2.Loc{Type: coordinatesConvertRequest.Convert}
         switch coordinatesConvertRequest.Type {
         case "wgs84":
             switch coordinatesConvertRequest.Convert {
