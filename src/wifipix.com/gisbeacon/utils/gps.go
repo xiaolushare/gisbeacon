@@ -14,12 +14,12 @@ import (
 var PI float64 = 3.14159265358979324
 
 type GPS struct {
-    X_PI float64
+    XPI float64
 }
 
 
 func NewGPS() *GPS {
-    return &GPS{X_PI:3.14159265358979324 * 3000.0 / 180.0,}
+    return &GPS{XPI:3.14159265358979324 * 3000.0 / 180.0,}
 }
 
 //WGS-84 to BD-09
@@ -95,8 +95,8 @@ func (gps *GPS) Gcj_decrypt_exact( gcjLat float64, gcjLon float64) map[string]fl
 func (gps *GPS) Bd_encrypt( gcjLat float64, gcjLon float64) map[string]float64 {
     x := gcjLon
     y := gcjLat
-    z := math.Sqrt(x * x + y * y) + 0.00002 * math.Sin(y * gps.X_PI)
-    theta := math.Atan2(y, x) + 0.000003 * math.Cos(x * gps.X_PI)
+    z := math.Sqrt(x * x + y * y) + 0.00002 * math.Sin(y * gps.XPI)
+    theta := math.Atan2(y, x) + 0.000003 * math.Cos(x * gps.XPI)
     bdLon := z * math.Cos(theta) + 0.0065
     bdLat := z * math.Sin(theta) + 0.006
     return map[string]float64{"lat": bdLat,"lon": bdLon}
@@ -106,8 +106,8 @@ func (gps *GPS) Bd_encrypt( gcjLat float64, gcjLon float64) map[string]float64 {
 func (gps *GPS) Bd_decrypt( bdLat float64, bdLon float64) map[string]float64 {
     x := bdLon - 0.0065
     y := bdLat - 0.006
-    z := math.Sqrt(x * x + y * y) - 0.00002 * math.Sin(y * gps.X_PI)
-    theta := math.Atan2(y, x) - 0.000003 * math.Cos(x * gps.X_PI)
+    z := math.Sqrt(x * x + y * y) - 0.00002 * math.Sin(y * gps.XPI)
+    theta := math.Atan2(y, x) - 0.000003 * math.Cos(x * gps.XPI)
     gcjLon := z * math.Cos(theta)
     gcjLat := z * math.Sin(theta)
     return map[string]float64{"lat": gcjLat, "lon": gcjLon}
@@ -188,6 +188,13 @@ func (gps *GPS) transformLon( x float64, y float64) float64{
     ret += (20.0 * math.Sin(x * PI) + 40.0 * math.Sin(x / 3.0 * PI)) * 2.0 / 3.0
     ret += (150.0 * math.Sin(x / 12.0 * PI) + 300.0 * math.Sin(x / 30.0 * PI)) * 2.0 / 3.0
     return ret
+}
+
+func (gps *GPS) CoordinatesConvert(lat float64, lon float64, gtype string) map[string]float64 {
+    switch gtype {
+
+    }
+    return nil
 }
 
 // vim: set ts=8 sw=4 tw=0 :

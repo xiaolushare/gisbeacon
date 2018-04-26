@@ -29,8 +29,10 @@ var (
 // 坐标点的格式为（纬度，经度）
 // 将这个区域用一个矩形表示
 type Box struct {
-    MinLat, MaxLat float64 // 纬度
-    MinLng, MaxLng float64 // 经度
+    MinLat float64 `json:"minLat"` // 维度
+    MaxLat float64 `json:"maxLat"`
+    MinLng float64 `json:"minLng"`
+    MaxLng float64 `json:"maxLng"` // 经度
 }
 
 func (this *Box) Width() float64 {

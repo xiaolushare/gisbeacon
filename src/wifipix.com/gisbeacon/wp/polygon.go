@@ -5,14 +5,14 @@
  *
  */
 
-package utils
+package wp
 
 import (
     "math"
 )
 
 type Polygon struct {
-    Path	[][]float64
+    Path [][]float64 `json:"polygon"`
 }
 
 func NewPolygon(polygon [][]float64) *Polygon {
@@ -47,7 +47,7 @@ func (polygon *Polygon)rayCrossesSegment(point [2]float64, a []float64, b []floa
     if py == ay || py == by {
         py += 0.00000001
     }
-    if ((py > by || py < ay) || (px > math.Max(ax, bx))) {
+    if (py > by || py < ay) || (px > math.Max(ax, bx)) {
         return false
     }
     if px < math.Min(ax, bx) {
@@ -55,14 +55,14 @@ func (polygon *Polygon)rayCrossesSegment(point [2]float64, a []float64, b []floa
     }
 
     var red , blue float64
-    if (ax != bx) {
-        red = ((by - ay) / (bx - ax))
+    if ax != bx {
+        red = (by - ay) / (bx - ax)
     }else {
         red = math.Inf(0)
     }
 
-    if (ax != px) {
-        blue = ((py - ay) / (px - ax))
+    if ax != px {
+        blue = (py - ay) / (px - ax)
     }else {
 
         blue = math.Inf(0)
@@ -80,11 +80,11 @@ func (polygon *Polygon)Contains(point [2]float64) bool{
     for i := 0; i < len(path); i++ {
         a := path[i]
         j := i + 1
-        if (j >= len(path)) {
+        if j >= len(path) {
             j = 0
         }
         b := path[j]
-        if (polygon.rayCrossesSegment(point, a, b)) {
+        if polygon.rayCrossesSegment(point, a, b) {
             crossings +=1
         }
     }
