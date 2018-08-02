@@ -91,7 +91,7 @@ func convexHull(points Points) *Hull {
     return &Hull{result}
 }
 
-func GetConvexHullPolygon(points [][]float64)(result [][]float64) {
+func GetConvexHullPolygon(points [][2]float64)(result [][2]float64) {
     ps := make(Points, 0)
     for _, point := range points {
         ps = append(ps, Point{X: point[0], Y: point[1]})
@@ -99,7 +99,7 @@ func GetConvexHullPolygon(points [][]float64)(result [][]float64) {
     hull := convexHull(ps)
     //result := make([][]float64, 0)
     for _, point := range hull.points {
-        result = append(result, []float64{point.X, point.Y})
+        result = append(result, [2]float64{point.X, point.Y})
     }
     return result
 }

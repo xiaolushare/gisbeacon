@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/xeipuuv/gojsonschema"
 	"io/ioutil"
@@ -177,12 +176,87 @@ const PointsConvexHullReqeustSchema = `{
                         }`
 
 type PointsConvexHullRequest struct {
-	Points [][]float64 `json:"points"`
+	Points [][2]float64 `json:"points"`
+}
+
+const PolygonGeohashReqeustSchema = `{
+                        "type": "object",
+                        "properties": {
+                               "precision": {
+                                    "type": "number",
+                                    "minimum": 1,
+                                    "maximum": 12,
+                                    "exclusiveMaximum": false,
+                                    "exclusiveMinimum": false
+                                },
+                                "inner": {
+                                    "type": "boolean"
+                                },
+                               "polygon": {
+                                    "type": "array",
+                                    "minItems": 4,
+                                    "maxItems": 10000,
+                                    "items":[
+                                        {
+                                             "type": "array",
+                                             "minItems": 2,
+                                             "maxItems": 2,
+                                             "items":[
+                                                    {
+                                                      "type": "number",
+                                                      "minimum": -180,
+                                                      "maximum": 180,
+                                                      "exclusiveMaximum": true,
+                                                      "exclusiveMinimum": true
+                                                    },
+                                                    {
+                                                      "type": "number",
+                                                      "minimum": -90,
+                                                      "maximum": 90,
+                                                      "exclusiveMaximum": true,
+                                                      "exclusiveMinimum": true
+                                                    }
+                                             ]
+                                        }
+                                    ]
+                               }
+                            },
+                        "required": ["precision", "inner", "polygon"]
+                        }`
+
+type PolygonGeohashRequest struct {
+    Precision   int       `json:"precision"`
+    Inner       bool      `json:"inner"`
+	Points [][2]float64   `json:"polygon"`
 }
 
 var area_path = flag.String("area", "./data/area.json", "area content json file path")
 var geohash_path = flag.String("geohash", "./data/geohash5adcodemap.json", "geohash 5 adcode map json file path")
 var port = flag.String("port", "8492", "server listen port")
+
+func Cors() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        method := c.Request.Method
+        origin := c.Request.Header.Get("Origin")
+        if origin != "" {
+           c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+           c.Header("Access-Control-Allow-Origin", "*")
+           c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE,UPDATE")
+           c.Header("Access-Control-Allow-Headers", "Authorization, Content-Length, X-CSRF-Token, " +
+               "Token,session,X_Requested_With,Accept, Origin, Host, Connection, Accept-Encoding, " +
+               "Accept-Language,DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, " +
+               "If-Modified-Since, Cache-Control, Content-Type, Pragma")
+           c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, " +
+               "Access-Control-Allow-Headers,Cache-Control,Content-Language,Content-Type,Expires,Last-Modified," +
+               "Pragma,FooBar")
+
+        }
+        if method == "OPTIONS" {
+           c.JSON(http.StatusOK, nil)
+        }
+        c.Next()
+    }
+}
 
 func main() {
 	runtime.GOMAXPROCS(0)
@@ -192,29 +266,41 @@ func main() {
 	var coordinatesGeohashRequestSchema = gojsonschema.NewStringLoader(CoordinatesGeohashRequestSchema)
 	var coordinatesPolygonRelationRequestSchema = gojsonschema.NewStringLoader(CoordinatesPolygonRelationRequestSchema)
 	var pointsConvexHullReqeustSchema = gojsonschema.NewStringLoader(PointsConvexHullReqeustSchema)
+    var polygonGeohashReqeustSchema = gojsonschema.NewStringLoader(PolygonGeohashReqeustSchema)
 	area := s2.NewGisArea(*area_path, *geohash_path)
 	gps := utils.NewGPS()
 
 	var setContextHearder = func(c *gin.Context) {
-		c.Writer.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		c.Writer.Header().Set("Server", "wifipix location server/1.0")
+        c.Header("Content-Type", "application/json; charset=UTF-8")
+        c.Header("Server", "gisbeacon/1.0")
 	}
 
 	var requestJsonSchemaValidate = func(schema gojsonschema.JSONLoader, c *gin.Context) ([]byte, bool) {
 		body := c.Request.Body
 		reqBody, _ := ioutil.ReadAll(body)
 		loder := gojsonschema.NewStringLoader(string(reqBody))
-		r, _ := gojsonschema.Validate(schema, loder)
-		if len(r.Errors()) > 0 {
-			//fmt.Println("err:%v", r.Errors())
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": map[string]interface{}{
-					"code":    -1,
-					"message": fmt.Sprintf("parameter request error %v", r.Errors()),
-				},
-			})
-			return nil, false
-		}
+		r, err := gojsonschema.Validate(schema, loder)
+
+        if r != nil && len(r.Errors()) > 0 {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "error": map[string]interface{}{
+                    "code":    -1,
+                    "message": fmt.Sprintf("parameter request error %v", r.Errors()),
+                },
+            })
+            return nil, false
+        }
+
+		if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "error": map[string]interface{}{
+                    "code":    -2,
+                    "message": fmt.Sprintf("parameter request error %v", err.Error()),
+                },
+            })
+            return nil, false
+        }
+
 		return reqBody, true
 	}
 
@@ -266,6 +352,7 @@ func main() {
 			})
 		}
 	})
+
 	// 经纬度坐标系转换
 	r.POST("/gis/convert", func(c *gin.Context) {
 		setContextHearder(c)
@@ -378,7 +465,7 @@ func main() {
 		result = append(result, result[0])
 
 		c.JSON(http.StatusOK, gin.H{
-			"result": map[string][][]float64{"polygon": result},
+			"result": map[string][][2]float64{"polygon": result},
 			"error": map[string]interface{}{
 				"code":    0,
 				"message": "success",
@@ -386,7 +473,40 @@ func main() {
 		})
 	})
 
-	r.Use(cors.Default())
+	// TODO for future
+	// 围栏内GEOhash集合
+	r.POST("/gis/polygon/geohash", func(c *gin.Context) {
+        setContextHearder(c)
+		var polygonGeohashRequest PolygonGeohashRequest
+        if reqBody, validate := requestJsonSchemaValidate(polygonGeohashReqeustSchema, c); !validate {
+            return
+        } else {
+            json.Unmarshal(reqBody, &polygonGeohashRequest)
+        }
+        var result = wp.PolygonToGeohashes(wp.NewPolygon(polygonGeohashRequest.Points), polygonGeohashRequest.Precision,
+            polygonGeohashRequest.Inner)
+        c.JSON(http.StatusOK, gin.H{
+            "result": map[string][]string{"geohashs": result},
+            "error": map[string]interface{}{
+                "code":    0,
+                "message": "success",
+            },
+        })
+	})
+
+	// 两点间距离
+
+	// 点到围栏最短距离和交点
+
+	// 点到线最短距离点
+
+	// 围栏面积
+
+	// 圆面积
+
+	// 两围栏关系 （包含， 相交， 独立）
+
+	r.Use(Cors())
 	r.Run(":" + *port)
 }
 
